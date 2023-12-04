@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+    
+    environment {
+        AWS_DEFAULT_REGION="ap-south-1"
+        AWS_CREDS=credentials('aws-chaitu')
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'feature/SCRUM-51-Make-it-Local-Like-we-developed-it', credentialsId: 'github-chaitanya-pandeswara', url: 'https://github.com/chaitanya-pandeswara/online-boutique-kubernetes-manifests.git'
+            }
+        }
+        
+        stage('Getting Kube Context') {
+            steps {
+                sh 'aws eks update-kubeconfig --name=terra-eks-cluster'
+            }
+        }
+        
+        stage('Verifying Kube Context') {
+            steps {
+                sh 'kubectl config current-context'
+            }
+        }
+        
+        stage('Deploying Application') {
+            steps {
+                sh 'kubectl apply -f kubernetes-manifests.yaml'
+            }
+        }        
+        
+    }
+}
