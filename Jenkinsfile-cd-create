@@ -4,6 +4,7 @@ pipeline {
     environment {
         AWS_DEFAULT_REGION="ap-south-1"
         AWS_CREDS=credentials('aws-chaitu')
+        SERVICE_NAME="frontend-external"
     }
 
     stages {
@@ -44,7 +45,13 @@ pipeline {
         
         stage('Checking Service Status') {
             steps {
-                sh 'kubectl get svc frontend-external'
+                script {
+                    // Get LoadBalancer URL for the "frontend-external" service
+                    def serviceUrl = sh(script: 'kubectl get service ${SERVICE_NAME} -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"', returnStdout: true).trim()
+                    
+                    // Print the LoadBalancer URL
+                    echo "Frontend Service URL: ${serviceUrl}"
+                }
             }
         }
         
