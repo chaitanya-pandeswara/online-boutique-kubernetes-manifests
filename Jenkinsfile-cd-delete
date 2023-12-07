@@ -1,0 +1,22 @@
+pipeline {
+    agent any
+    
+    environment {
+        AWS_DEFAULT_REGION="ap-south-1"
+        AWS_CREDS=credentials('aws-chaitu')
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'feature/SCRUM-51-Make-it-Local-Like-we-developed-it', credentialsId: 'github-chaitanya-pandeswara', url: 'https://github.com/chaitanya-pandeswara/online-boutique-kubernetes-manifests.git'
+            }
+        }       
+        
+        stage('Deleting Application') {
+            steps {
+                sh 'kubectl delete -f kubernetes-manifests.yaml'
+            }
+        }
+    }
+}

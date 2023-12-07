@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+    
+    environment {
+        AWS_DEFAULT_REGION="ap-south-1"
+        AWS_CREDS=credentials('aws-chaitu')
+        SERVICE_NAME="frontend-external"
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'feature/SCRUM-51-Make-it-Local-Like-we-developed-it', credentialsId: 'github-chaitanya-pandeswara', url: 'https://github.com/chaitanya-pandeswara/online-boutique-kubernetes-manifests.git'
+            }
+        }
+        
+        stage('Updating Kube Context') {
+            steps {
+                script {
+                    // Copy the archived environment variable file from online-boutique-platform-terraform-create
+                    copyArtifacts(projectName: 'online-boutique-platform-terraform-create', filter: 'env-vars.yaml')
+                    
+                    // Read the environment variable from the copied file
+                    def envVars = readYaml file: 'env-vars.yaml'
+                    def AWS_EKS_CLUSTER_NAME = envVars.AWS_EKS_CLUSTER_NAME
+
+                    // Use the AWS_EKS_CLUSTER_NAME variable in your command
+                    sh "aws eks update-kubeconfig --name=${AWS_EKS_CLUSTER_NAME}"
+                    
+                }
+            }
+        }
+        
+        stage('Verifying Kube Context') {
+            steps {
+                sh 'kubectl config current-context'
+            }
+        }
+        
+        stage('Deploying Application') {
+            steps {
+                sh 'kubectl apply -f kubernetes-manifests.yaml'
+            }
+        }
+        
+        stage('Checking Service Status') {
+            steps {
+                script {
+                    // Get LoadBalancer URL for the "frontend-external" service
+                    def serviceUrl = sh(script: 'kubectl get service ${SERVICE_NAME} -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"', returnStdout: true).trim()
+                    
+                    // Print the LoadBalancer URL
+                    echo "Frontend Service URL: ${serviceUrl}"
+                }
+            }
+        }
+        
+    }
+}
