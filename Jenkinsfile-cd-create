@@ -13,9 +13,20 @@ pipeline {
             }
         }
         
-        stage('Getting Kube Context') {
+        stage('Updating Kube Context') {
             steps {
-                sh 'aws eks update-kubeconfig --name=terra-eks-cluster'
+                script {
+                    // Copy the archived environment variable file from online-boutique-platform-terraform-create
+                    copyArtifacts(projectName: 'online-boutique-platform-terraform-create', filter: 'env-vars.yaml')
+                    
+                    // Read the environment variable from the copied file
+                    def envVars = readYaml file: 'env-vars.yaml'
+                    def AWS_EKS_CLUSTER_NAME = envVars.AWS_EKS_CLUSTER_NAME
+
+                    // Use the AWS_EKS_CLUSTER_NAME variable in your command
+                    sh "aws eks update-kubeconfig --name=${AWS_EKS_CLUSTER_NAME}"
+                    
+                }
             }
         }
         
@@ -29,7 +40,13 @@ pipeline {
             steps {
                 sh 'kubectl apply -f kubernetes-manifests.yaml'
             }
-        }        
+        }
+        
+        stage('Checking Service Status') {
+            steps {
+                sh 'kubectl get svc frontend-external'
+            }
+        }
         
     }
 }
